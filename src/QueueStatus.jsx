@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "./firebase";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import "./QueueStatus.css";
 
 const QueueStatus = () => {
@@ -15,9 +15,11 @@ const QueueStatus = () => {
       try {
         setLoading(true);
 
+        // Get the employee ID from localStorage
         const userID = localStorage.getItem("employeeID");
         if (!userID) throw new Error("User not registered!");
 
+        // Fetch user queue details
         const queueRef = collection(db, "queue");
         const userQuery = query(queueRef, where("employeeID", "==", userID));
         const userSnapshot = await getDocs(userQuery, { source: "server" });
@@ -38,12 +40,15 @@ const QueueStatus = () => {
           setQueueNumber("N/A");
         }
 
-        const currentServingRef = doc(db, "queueStatus", "currentServing");
-        const currentServingSnapshot = await getDoc(currentServingRef);
-        if (currentServingSnapshot.exists()) {
-          setCurrentServing(currentServingSnapshot.data().number);
+        // Query the queue collection for the current serving entry
+        const currentServingQuery = query(queueRef, where("status", "==", "being attended"));
+        const currentServingSnapshot = await getDocs(currentServingQuery);
+
+        if (!currentServingSnapshot.empty) {
+          const currentServingData = currentServingSnapshot.docs[0].data();
+          setCurrentServing(currentServingData.queueNumber || "No one is currently being served");
         } else {
-          setCurrentServing("N/A");
+          setCurrentServing("No one is currently being served");
         }
       } catch (error) {
         console.error("Error fetching queue status:", error);
@@ -73,9 +78,9 @@ const QueueStatus = () => {
             </div>
           </>
         )}
-        <br></br>
+        <br />
         <p>Thank you for visiting our clinic</p>
-        <br></br>
+        <br />
         <p>Stay safe, stay healthy</p>
         <div className="date-time">
           <span className="date">{date}</span>
